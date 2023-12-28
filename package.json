@@ -27,6 +27,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/sequelize": "^10.0.0",
+    "@vercel/postgres": "^0.5.1",
     "axios": "^1.6.2",
     "dotenv": "^16.3.1",
     "nestjs-telegraf": "^2.7.0",
