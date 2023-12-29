@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Telegraf } from 'telegraf';
 import axios from 'axios';
 import { User } from 'src/models/core/User';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class TelegramService {
@@ -172,9 +174,16 @@ export class TelegramService {
   @Cron('* * * * *')
   private async sendAutomaticMessage() {
     this.logger.log('Sedang Mengirim Pesan...');
-    const date = new Date();
-    const hour = date.getHours();
-    const minute = date.getMinutes();
+    const desiredTimeZone = 'Asia/Jakarta';
+
+    const currentDate = new Date();
+
+    const formattedDate = currentDate.toLocaleString('id-ID', {
+      timeZone: desiredTimeZone,
+    });
+
+    const [datePart, timePart] = formattedDate.split(' ');
+    const [hour, minute] = timePart.split('.');
     console.log(`jam ${hour}:${minute}`);
     const users = await this.userRepository.findAll({
       where: {

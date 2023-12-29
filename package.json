@@ -30,6 +30,7 @@
     "@vercel/postgres": "^0.5.1",
     "axios": "^1.6.2",
     "dotenv": "^16.3.1",
+    "moment-timezone": "^0.5.43",
     "nestjs-telegraf": "^2.7.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
