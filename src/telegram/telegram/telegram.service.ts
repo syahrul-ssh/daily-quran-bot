@@ -359,7 +359,7 @@ export class TelegramService {
     this.bot.telegram.sendMessage(existChatId.chatId, message);
   }
 
-  // @Cron('* * * * *')
+  @Cron('* * * * *')
   private async sendAutomaticMessage() {
     this.logger.log('Sedang Mengirim Pesan...');
     const desiredTimeZone = 'Asia/Jakarta';
