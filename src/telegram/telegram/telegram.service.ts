@@ -2,7 +2,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { Telegraf } from 'telegraf';
+import { Markup, Telegraf } from 'telegraf';
 import axios from 'axios';
 import { User } from 'src/models/core/User';
 import * as moment from 'moment-timezone';
@@ -58,6 +58,128 @@ export class TelegramService {
       this.onSetTime(ctx, parameter);
     });
 
+    this.bot.command('shuffletheme', (ctx) => {
+      const command = ctx.message.text.split(' ')[0];
+      const keyword = ctx.message.text.substring(command.length + 1);
+
+      this.shuffleWithTheme(ctx, keyword);
+    });
+
+    this.bot.command('listtheme', async (ctx) => {
+      const apiEndPointBaseUrl = process.env.THEME_QURAN_API;
+      const apiListThemeFullUrl = `${apiEndPointBaseUrl}quran/theme`;
+      const listTheme = await this.getDataApi(apiListThemeFullUrl);
+      // Your pagination logic here
+      const command = ctx.message.text; // Get the command text
+      const page = parseInt(command.split(' ')[1]) || 1; // Extract the page number from the command
+
+      // Replace this with your data fetching logic
+      const data = listTheme.map((i) => `${i.id}. ${i.name}`);
+
+      const itemsPerPage = 20; // Number of items to display per page
+      let startIndex = (page - 1) * itemsPerPage;
+      let endIndex = startIndex + itemsPerPage;
+      let currentPageData = data.slice(startIndex, endIndex);
+
+      // Display current page data to the user with inline keyboard
+      ctx.reply(
+        `Jumlah Tema : ${
+          listTheme.length
+        },\nHalaman ${page}:\n${currentPageData.join('\n')}`,
+        Markup.inlineKeyboard([
+          // Markup.button.callback(
+          //   `Page ${page > 1 ? page - 1 : data.length - 1}`,
+          //   `prev_${page}`,
+          // ),
+          Markup.button.callback(
+            `Next ${(page + 1) % data.length}`,
+            `next_${page}`,
+          ),
+        ]),
+      );
+      this.bot.action(/next\_(\d+)/, async (ctx: any) => {
+        const page = parseInt(ctx.match[1], 10) + 1;
+        startIndex = (page - 1) * itemsPerPage;
+        endIndex = startIndex + itemsPerPage;
+        currentPageData = data.slice(startIndex, endIndex);
+        if (currentPageData.length === 0 || endIndex === data.length) {
+          await ctx.editMessageText(
+            `Jumlah Tema : ${
+              listTheme.length
+            },\nHalaman ${page}:\n${currentPageData.join('\n')}`,
+            Markup.inlineKeyboard([
+              Markup.button.callback(
+                `Prev ${page > 1 ? page - 1 : data.length - 1}`,
+                `prev_${page}`,
+              ),
+              // Markup.button.callback(
+              //   `Next ${(page + 1) % data.length}`,
+              //   `next_${page}`,
+              // ),
+            ]),
+          );
+        } else {
+          await ctx.editMessageText(
+            `Jumlah Tema : ${
+              listTheme.length
+            },\nHalaman ${page}:\n${currentPageData.join('\n')}`,
+            Markup.inlineKeyboard([
+              Markup.button.callback(
+                `Prev ${page > 1 ? page - 1 : data.length - 1}`,
+                `prev_${page}`,
+              ),
+              Markup.button.callback(
+                `Next ${(page + 1) % data.length}`,
+                `next_${page}`,
+              ),
+            ]),
+          );
+        }
+      });
+
+      this.bot.action(/prev\_(\d+)/, async (ctx: any) => {
+        const page = parseInt(ctx.match[1], 10) - 1;
+        startIndex = (page - 1) * itemsPerPage;
+        endIndex = startIndex + itemsPerPage;
+        currentPageData = data.slice(startIndex, endIndex);
+        if (currentPageData.length === 0 || page === 1) {
+          await ctx.editMessageText(
+            `Jumlah Tema : ${
+              listTheme.length
+            },\nHalaman ${page}:\n${currentPageData.join('\n')}`,
+            Markup.inlineKeyboard([
+              // Markup.button.callback(
+              //   `Prev ${page > 1 ? page - 1 : data.length - 1}`,
+              //   `prev_${page}`,
+              // ),
+              Markup.button.callback(
+                `Next ${(page + 1) % data.length}`,
+                `next_${page}`,
+              ),
+            ]),
+          );
+        } else {
+          await ctx.editMessageText(
+            `Jumlah Tema : ${
+              listTheme.length
+            },\nHalaman ${page}:\n${currentPageData.join('\n')}`,
+            Markup.inlineKeyboard([
+              Markup.button.callback(
+                `Prev ${page > 1 ? page - 1 : data.length - 1}`,
+                `prev_${page}`,
+              ),
+              Markup.button.callback(
+                `Next ${(page + 1) % data.length}`,
+                `next_${page}`,
+              ),
+            ]),
+          );
+        }
+      });
+    });
+
+    // Handle inline keyboard button callbacks
+
     this.bot.launch().then(() => {
       console.log('Bot has started');
     });
@@ -65,7 +187,7 @@ export class TelegramService {
 
   private help(ctx: any) {
     const message = `Berikut beberapa command yang ada pada bot ini:
-    
+
     /start :
     untuk memulai bot
 
@@ -76,7 +198,13 @@ export class TelegramService {
     melakukan pengeriman sebuah ayat Al-Qur'an secara langsung
 
     /settime HH:mm :
-    mengatur waktu penjadwalan pengiriman pesan, dengan format HH = 00-23 dan mm = 00-59`;
+    mengatur waktu penjadwalan pengiriman pesan, dengan format HH = 00-23 dan mm = 00-59
+    
+    /listtheme :
+    menampilkan daftar tema yang tersedia
+    
+    /shuffletheme keyword :
+    melakukan pengiriman sebuah ayat Al-Qur'an secara langsung berdasarkan tema, keyword bisa berisi kalimat tema dari perintah /listtheme atau hanya keyword dari perintah /listtheme`;
 
     ctx.reply(message);
   }
@@ -171,7 +299,67 @@ export class TelegramService {
     this.bot.telegram.sendMessage(chatId, message);
   }
 
-  @Cron('* * * * *')
+  private async shuffleWithTheme(ctx: any, parameter: string) {
+    const existChatId = await this.userRepository.findOne({
+      where: {
+        chatId: ctx.chat.id,
+      },
+    });
+    if (!existChatId) {
+      ctx.reply(`Anda belum terdaftar pada sistem.
+        
+        masukan perintah /start untuk mendaftarkan diri anda!`);
+      return;
+    }
+    const apiEndPointBaseUrl = process.env.THEME_QURAN_API;
+
+    const apiListThemeFullUrl = `${apiEndPointBaseUrl}quran/theme`;
+    const listTheme = await this.getDataApi(apiListThemeFullUrl);
+    const apiListAyahFullUrl = `${apiEndPointBaseUrl}quran/ayah`;
+    const listAyah = await this.getDataApi(apiListAyahFullUrl);
+
+    const themeId = [];
+    for await (const theme of listTheme) {
+      const pattern = new RegExp(`.*${parameter.toLowerCase()}.*`);
+
+      if (pattern.test(theme.name.toLowerCase())) {
+        themeId.push(theme.id);
+      }
+    }
+
+    const listSurahAyah = [];
+    for await (const ayah of listAyah) {
+      const findAyah = themeId.find((theme) => theme === ayah.theme);
+      if (findAyah) {
+        listSurahAyah.push({ surah: ayah.surah, ayah: ayah.ayah });
+      }
+    }
+    const shuffle = await this.yates(listSurahAyah);
+    const apiEndPoint = process.env.QURAN_API;
+
+    const verse = await this.getDataApi(
+      `${apiEndPoint}${shuffle[0].surah}/${shuffle[0].ayah}`,
+    );
+    const data = {
+      meta_message: {
+        name_transliteration: verse.surah.name.transliteration.id,
+        verse_arabic: verse.text.arab,
+        verse_translation: verse.translation.id,
+        tafsir: verse.tafsir.id.short,
+      },
+    };
+
+    const message = `Surah ${data.meta_message.name_transliteration}:${shuffle[0].ayah}
+      ${data.meta_message.verse_arabic}
+  
+      Terjemah : ${data.meta_message.verse_translation}
+  
+      Tafsir : ${data.meta_message.tafsir}`;
+
+    this.bot.telegram.sendMessage(existChatId.chatId, message);
+  }
+
+  // @Cron('* * * * *')
   private async sendAutomaticMessage() {
     this.logger.log('Sedang Mengirim Pesan...');
     const desiredTimeZone = 'Asia/Jakarta';
@@ -265,7 +453,6 @@ export class TelegramService {
   }
 
   private yates(arr) {
-    console.log(arr);
     let i = arr.length,
       j,
       temp;
@@ -275,7 +462,6 @@ export class TelegramService {
       arr[j] = arr[i];
       arr[i] = temp;
     }
-    console.log(arr);
     return arr;
   }
 
