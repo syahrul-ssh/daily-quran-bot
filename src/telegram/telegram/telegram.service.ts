@@ -315,8 +315,6 @@ export class TelegramService {
 
     const apiListThemeFullUrl = `${apiEndPointBaseUrl}quran/theme`;
     const listTheme = await this.getDataApi(apiListThemeFullUrl);
-    const apiListAyahFullUrl = `${apiEndPointBaseUrl}quran/ayah`;
-    const listAyah = await this.getDataApi(apiListAyahFullUrl);
 
     const themeId = [];
     for await (const theme of listTheme) {
@@ -326,6 +324,13 @@ export class TelegramService {
         themeId.push(theme.id);
       }
     }
+
+    if (!themeId.length) {
+      ctx.reply(`Tema dengan keyword yang anda masukan tidak ditemukan!`);
+      return;
+    }
+    const apiListAyahFullUrl = `${apiEndPointBaseUrl}quran/ayah`;
+    const listAyah = await this.getDataApi(apiListAyahFullUrl);
 
     const listSurahAyah = [];
     for await (const ayah of listAyah) {
