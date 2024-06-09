@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
+import { HistoryShuffledSurah } from './HistoryShuffledSurah';
 
 @Table
 export class User extends Model<User> {
@@ -31,4 +32,7 @@ export class User extends Model<User> {
     type: DataType.INTEGER,
   })
   currentAyah: number;
+
+  @HasMany(() => HistoryShuffledSurah)
+  history: HistoryShuffledSurah[];
 }

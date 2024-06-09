@@ -6,6 +6,8 @@ import { Markup, Telegraf } from 'telegraf';
 import axios from 'axios';
 import { User } from 'src/models/core/User';
 import * as moment from 'moment-timezone';
+import { HistoryShuffledSurah } from 'src/models/core/HistoryShuffledSurah';
+import { CronLog } from 'src/models/core/CronLog';
 
 @Injectable()
 export class TelegramService {
@@ -15,6 +17,9 @@ export class TelegramService {
   constructor(
     private readonly httpService: HttpService,
     @Inject('USER_REPOSITORY') private readonly userRepository: typeof User,
+    @Inject('HISTORY_REPOSITORY')
+    private readonly historyRepository: typeof HistoryShuffledSurah,
+    @Inject('CRON_REPOSITORY') private readonly cronRepository: typeof CronLog,
   ) {
     this.bot = new Telegraf(process.env.BOT_TOKEN);
     this.initialize();
@@ -385,6 +390,11 @@ export class TelegramService {
       },
     });
 
+    this.cronRepository.create({
+      time: `${hour}:${minute}`,
+      foundedChatId: users.map((user) => user.chatId),
+    });
+
     users.map(async (user) => {
       const data = await this.dailyQuran(user.chatId, 'cron');
 
@@ -400,6 +410,12 @@ export class TelegramService {
           },
         },
       );
+
+      this.historyRepository.create({
+        userId: user.id,
+        suffledSurah: data.shuffle_surah,
+      });
+
       const message = `Surah ${data.data.meta_message.name_transliteration}:${data.number}
       ${data.data.meta_message.verse_arabic}
   
