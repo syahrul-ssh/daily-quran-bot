@@ -390,10 +390,10 @@ export class TelegramService {
       },
     });
 
-    this.cronRepository.create({
-      time: `${hour}:${minute}`,
-      foundedChatId: users.map((user) => user.chatId),
-    });
+    // this.cronRepository.create({
+    //   time: `${hour}:${minute}`,
+    //   foundedChatId: users.map((user) => user.chatId),
+    // });
 
     users.map(async (user) => {
       const data = await this.dailyQuran(user.chatId, 'cron');
